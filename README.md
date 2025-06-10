@@ -3,6 +3,8 @@ Installs tdarr on Ubuntu server.
 sourced from:
 https://github.com/tteck/Proxmox/blob/main/install/tdarr-install.sh
 
+!!The modified script is not tested!!
+
 This steps might be needed to get nvidia hardware to work.
 
 To add NVIDIA GPU hardware acceleration support on Ubuntu 25.04 for your Tdarr setup, you'll need to:
