@@ -1,5 +1,7 @@
 # tdarr-installer
 Installs tdarr on Ubuntu server.
+sourced from:
+https://github.com/tteck/Proxmox/blob/main/install/tdarr-install.sh
 
 This steps might be needed to get nvidia hardware to work.
 
