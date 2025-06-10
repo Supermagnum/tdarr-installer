@@ -2,6 +2,12 @@
 
 # Updated for Ubuntu 25.04 Bare Metal
 # Secure: Runs Tdarr under unprivileged user and asks for group membership
+# Ensure script is run as root
+if [[ $EUID -ne 0 ]]; then
+  echo " This script must be run as root. Please run it with:"
+  echo "   sudo $0"
+  exit 1
+fi
 
 source /dev/stdin <<< "$FUNCTIONS_FILE_PATH"
 color
