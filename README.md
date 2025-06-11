@@ -1,5 +1,7 @@
 # tdarr-installer
-Installs tdarr on Ubuntu server.
+What tdarr is can be read here:
+https://home.tdarr.io/
+The .sh file installs tdarr on Ubuntu server.
 sourced from:
 https://github.com/tteck/Proxmox/blob/main/install/tdarr-install.sh
 
