@@ -1,4 +1,8 @@
 # tdarr-installer
+This script installs Tdarr on a bare metal ubuntu server.
+It also creates the necessary services so tdarr starts automatically on boot. These services are run under a 
+under unprivileged user as it is generally bad to run these as root.
+
 What tdarr is can be read here:
 https://home.tdarr.io/
 The .sh file installs tdarr on Ubuntu server.
@@ -7,6 +11,8 @@ https://github.com/tteck/Proxmox/blob/main/install/tdarr-install.sh
 
 
 !!The modified script is not tested!!
+It is located here:
+https://github.com/Supermagnum/tdarr-installer/blob/main/tdarr-ubuntu.sh
 
 Run with: sudo ./tdarr-ubuntu.sh
 
@@ -28,23 +34,23 @@ To add NVIDIA GPU hardware acceleration support on Ubuntu 25.04 for your Tdarr s
 
 ---
 
-✅ Step-by-Step: Add NVIDIA GPU Support
+Step-by-Step: Add NVIDIA GPU Support
 
-🔧 1. Install NVIDIA Drivers
+ 1. Install NVIDIA Drivers
 
 Ubuntu 25.04 should have recent drivers in its repo:
 
 sudo apt update
 sudo apt install -y nvidia-driver-535
 
-> 🧪 Run nvidia-smi after reboot to confirm GPU is working:
+> Run nvidia-smi after reboot to confirm GPU is working:
 
 nvidia-smi
 
 
 ---
 
-📦 2. Install NVIDIA Video Codec SDK Components
+2. Install NVIDIA Video Codec SDK Components
 
 Tdarr uses FFmpeg which relies on NVENC/NVDEC support:
 
@@ -59,7 +65,7 @@ sudo apt install -y libnvidia-compute-535 libnvidia-decode-535 libnvidia-ifr1-53
 
 ---
 
-🔁 3. Reconfigure Tdarr to Use NVIDIA GPU
+ 3. Reconfigure Tdarr to Use NVIDIA GPU
 
 Make sure FFmpeg inside Tdarr nodes uses the GPU via h264_nvenc, hevc_nvenc, etc.
 
@@ -68,7 +74,7 @@ No need to install ffmpeg system-wide unless you're customizing transcode script
 
 ---
 
-👤 4. Grant tdarr User Access to NVIDIA Devices
+4. Grant tdarr User Access to NVIDIA Devices
 
 Run this:
 
@@ -83,7 +89,7 @@ They should be owned by root:video with group read/write (crw-rw----).
 
 ---
 
-🔌 5. Restart Services
+5. Restart Services
 
 After driver install and user group updates:
 
@@ -97,7 +103,7 @@ sudo systemctl restart tdarr-node
 
 ---
 
-🧪 Test GPU Transcoding in Tdarr
+Test GPU Transcoding in Tdarr
 
 Inside Tdarr:
 
