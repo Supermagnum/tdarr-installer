@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Tdarr Installer Script for Ubuntu 25.04 Bare Metal
-# Author: You
+# Author: supermag
 # Description: Secure Tdarr install with NVIDIA and Intel GPU support
 
 set -e
@@ -78,7 +78,7 @@ done
 
 # Set /dev/dri permissions if exists
 if [ -d /dev/dri ]; then
-  echo "🔧 Adjusting /dev/dri permissions..."
+  echo " Adjusting /dev/dri permissions..."
   chgrp -R video /dev/dri || true
   chmod 755 /dev/dri || true
   chmod 660 /dev/dri/* || true
