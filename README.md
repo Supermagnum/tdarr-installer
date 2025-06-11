@@ -5,7 +5,10 @@ The .sh file installs tdarr on Ubuntu server.
 sourced from:
 https://github.com/tteck/Proxmox/blob/main/install/tdarr-install.sh
 
+
 !!The modified script is not tested!!
+Run with:
+sudo ./tdarr-ubuntu.sh
 
 This steps might be needed to get nvidia hardware to work.
 
