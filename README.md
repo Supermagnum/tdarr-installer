@@ -24,6 +24,8 @@ After running the script:
 Run nvidia-smi after reboot to confirm GPU is working:
 
 nvidia-smi
+
+
 ---
 Reconfigure Tdarr to Use NVIDIA GPU
 
