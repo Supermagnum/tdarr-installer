@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # Tdarr Installer Script for Ubuntu 25.04 Bare Metal
-# Author: supermag
+# Author: supermag (revised)
 # Description: Secure Tdarr install with NVIDIA and Intel GPU support
 
 set -e
 
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
-  echo " This script must be run as root. Please run it with:"
-  echo "   sudo $0"
+  echo "This script must be run as root. Please run it with:"
+  echo "  sudo $0"
   exit 1
 fi
 
@@ -44,7 +44,7 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
-  echo " Installing missing packages: ${MISSING_PKGS[*]}"
+  echo "Installing missing packages: ${MISSING_PKGS[*]}"
   apt-get update
   apt-get install -y "${MISSING_PKGS[@]}"
 else
@@ -52,21 +52,21 @@ else
 fi
 
 # Create tdarr user if not exists
-echo " Ensuring user 'tdarr' exists..."
+echo "Ensuring user 'tdarr' exists..."
 if id "tdarr" &>/dev/null; then
-  echo " User 'tdarr' already exists."
+  echo "User 'tdarr' already exists."
 else
   useradd -r -s /usr/sbin/nologin -d /opt/tdarr -m tdarr
   echo "Created user 'tdarr'."
 fi
 
 # Ensure required groups exist and user is in them
-echo " Verifying groups and memberships..."
+echo "Verifying groups and memberships..."
 for grp in "$GROUP_NAME" video render; do
   if getent group "$grp" >/dev/null; then
     echo "Group '$grp' exists."
   else
-    echo " Creating group '$grp'..."
+    echo "Creating group '$grp'..."
     groupadd "$grp"
   fi
   usermod -aG "$grp" tdarr
@@ -74,20 +74,39 @@ done
 
 # Set /dev/dri permissions if exists
 if [ -d /dev/dri ]; then
-  echo " Adjusting /dev/dri permissions..."
+  echo "Adjusting /dev/dri permissions..."
   chgrp -R video /dev/dri || true
   chmod 755 /dev/dri || true
   chmod 660 /dev/dri/* || true
 fi
 
-echo " Installing Tdarr..."
+echo "Installing Tdarr..."
 mkdir -p /opt/tdarr
 cd /opt/tdarr
 chown tdarr:tdarr /opt/tdarr
 
-# Download latest Tdarr_Updater
-echo " Fetching latest Tdarr Updater..."
-RELEASE=$(curl -s https://f000.backblazeb2.com/file/tdarrs/versions.json | jq -r '.Tdarr_Updater | to_entries[] | select(.key | test("linux_x64")) | .value' | head -n 1)
+echo "Fetching latest Tdarr Updater..."
+
+# Download and parse versions.json
+VERSIONS=$(curl -sf https://f000.backblazeb2.com/file/tdarrs/versions.json) || {
+  echo "❌ Network error. Could not reach versions.json"
+  exit 1
+}
+
+# Try JSON parsing first
+RELEASE=$(printf '%s' "$VERSIONS" | jq -r '.Tdarr_Updater // empty | to_entries[]? | select(.key | test("linux_x64")) | .value' | head -n1)
+
+# Fallback: grep-based extraction if jq fails
+if [[ -z "$RELEASE" || "$RELEASE" == "null" ]]; then
+  RELEASE=$(printf '%s' "$VERSIONS" | grep -oP '"https[^"]+Tdarr_Updater[^"]+linux_x64[^"]*\.zip"' | head -n1 | cut -d'"' -f2)
+fi
+
+if [[ -z "$RELEASE" ]]; then
+  echo "❌ Could not parse a valid Tdarr_Updater URL from versions.json."
+  exit 1
+fi
+
+echo "Downloading: $RELEASE"
 wget -q "$RELEASE" -O Tdarr_Updater.zip
 sudo -u tdarr unzip -o Tdarr_Updater.zip
 rm -f Tdarr_Updater.zip
@@ -138,15 +157,16 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-echo " Enabling and starting services..."
+echo "Enabling and starting services..."
 systemctl daemon-reexec
 systemctl daemon-reload
 systemctl enable --now tdarr-server.service
 systemctl enable --now tdarr-node.service
 
-echo " Cleaning up..."
+echo "Cleaning up..."
 apt-get -y autoremove
 apt-get -y autoclean
 
-echo "Tdarr installation complete and running!"
-echo "Access the web interface at: http://<your-ip>:8265"
+echo
+echo "✅ Tdarr installation complete and running!"
+echo "👉 Access the web interface at: http://<your-ip>:8265"
