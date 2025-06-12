@@ -26,7 +26,6 @@ PACKAGES=(
   handbrake-cli
   unzip
   jq
-  sudo
   va-driver-all
   ocl-icd-libopencl1
   intel-opencl-icd
