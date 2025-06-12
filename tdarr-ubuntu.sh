@@ -23,19 +23,16 @@ echo "Checking required packages..."
 PACKAGES=(
   curl
   mc
-  handbrake-cli
+  handbrake
   unzip
   jq
   va-driver-all
-  ocl-icd-libopencl1
+  ocl-icd-opencl-dev
   intel-opencl-icd
+  mesa-opencl-icd
   vainfo
   intel-gpu-tools
-  nvidia-driver-535
-  libnvidia-encode-535
-  libnvidia-compute-535
-  libnvidia-decode-535
-  libnvidia-ifr1-535
+  nvidia-driver-535-server
 )
 
 # Install missing packages
