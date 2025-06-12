@@ -1,31 +1,40 @@
 #!/usr/bin/env bash
 
 # Tdarr Installer Script for Ubuntu 25.04 Bare Metal
-# Author: supermag (revised)
-# Description: Secure Tdarr install with GPU support and fallback URL
+# Author: supermag (updated by ChatGPT)
+# Description: Secure Tdarr install with NVIDIA and Intel GPU support
+# Handles manual Tdarr_Server and Tdarr_Node downloads
 
 set -e
 
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
-  echo "This script must be run as root. Please run it with:"
-  echo "  sudo $0"
+  echo " This script must be run as root. Please run it with:"
+  echo "   sudo $0"
   exit 1
 fi
 
-# Prompt for media group name
 read -rp "Enter group name for media access (default: media): " GROUP_NAME
 GROUP_NAME=${GROUP_NAME:-media}
 
 echo "Checking required packages..."
 
-# Required packages
 PACKAGES=(
-  curl mc handbrake unzip jq
+  curl
+  mc
+  handbrake-cli
+  unzip
+  jq
+  vainfo
+  intel-gpu-tools
+  ocl-icd-libopencl1
+  intel-opencl-icd
   va-driver-all
-  ocl-icd-opencl-dev intel-opencl-icd mesa-opencl-icd
-  vainfo intel-gpu-tools
-  nvidia-driver-535-server
+  nvidia-driver-535
+  libnvidia-encode-535
+  libnvidia-compute-535
+  libnvidia-decode-535
+  libnvidia-ifr1-535
 )
 
 MISSING_PKGS=()
@@ -36,35 +45,32 @@ for pkg in "${PACKAGES[@]}"; do
 done
 
 if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
-  echo "Installing missing packages: ${MISSING_PKGS[*]}"
+  echo " Installing missing packages: ${MISSING_PKGS[*]}"
   apt-get update
   apt-get install -y "${MISSING_PKGS[@]}"
 else
-  echo "All required packages already installed."
+  echo "All required packages are already installed."
 fi
 
-# Create tdarr user
 echo "Ensuring user 'tdarr' exists..."
 if id "tdarr" &>/dev/null; then
-  echo "User 'tdarr' exists."
+  echo "User 'tdarr' already exists."
 else
   useradd -r -s /usr/sbin/nologin -d /opt/tdarr -m tdarr
   echo "Created user 'tdarr'."
 fi
 
-# Group memberships
-echo "Verifying groups..."
+echo "Verifying groups and memberships..."
 for grp in "$GROUP_NAME" video render; do
-  if ! getent group "$grp" >/dev/null; then
+  if getent group "$grp" >/dev/null; then
+    echo "Group '$grp' exists."
+  else
     echo "Creating group '$grp'..."
     groupadd "$grp"
-  else
-    echo "Group '$grp' exists."
   fi
   usermod -aG "$grp" tdarr
 done
 
-# /dev/dri permissions
 if [ -d /dev/dri ]; then
   echo "Adjusting /dev/dri permissions..."
   chgrp -R video /dev/dri || true
@@ -72,36 +78,48 @@ if [ -d /dev/dri ]; then
   chmod 660 /dev/dri/* || true
 fi
 
-echo "Installing Tdarr..."
-mkdir -p /opt/tdarr && chown tdarr:tdarr /opt/tdarr
-cd /opt/tdarr
+mkdir -p /opt/tdarr
+chown tdarr:tdarr /opt/tdarr
 
-echo "Fetching latest Tdarr Updater URL..."
+# Detect architecture
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64) ARCH_TAG="linux_x64" ;;
+  aarch64) ARCH_TAG="linux_arm64" ;;
+  *)
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+    ;;
+esac
 
-VERSIONS=$(curl -sf https://f000.backblazeb2.com/file/tdarrs/versions.json) || {
-  echo "❌ Network error reaching versions.json — using fallback URL"
-  VERSIONS=""
-}
+TDARR_VERSION="2.17.01"
+BASE_URL="https://storage.tdarr.io/versions/$TDARR_VERSION"
 
-RELEASE=$(printf '%s' "$VERSIONS" \
-  | jq -r '.Tdarr_Updater // empty | to_entries[]? | select(.key | test("linux_x64|linux_arm64")) | .value' \
-  | head -n1)
+echo "Downloading Tdarr_Updater for architecture: $ARCH_TAG"
+wget -q "$BASE_URL/$ARCH_TAG/Tdarr_Updater.zip" -O /opt/tdarr/Tdarr_Updater.zip
+chown tdarr:tdarr /opt/tdarr/Tdarr_Updater.zip
 
-if [[ -z "$RELEASE" || "$RELEASE" == "null" ]]; then
-  echo "⚠️ Couldn't parse versions.json — using fallback URL"
-  RELEASE="https://storage.tdarr.io/versions/2.17.01/linux_arm64/Tdarr_Updater.zip"
-fi
+echo "Extracting Tdarr_Updater..."
+sudo -u tdarr unzip -o /opt/tdarr/Tdarr_Updater.zip -d /opt/tdarr/
+chmod +x /opt/tdarr/Tdarr_Updater
 
-echo "Downloading: $RELEASE"
-wget -q "$RELEASE" -O Tdarr_Updater.zip
+echo "Downloading Tdarr_Server and Tdarr_Node zips manually..."
+wget -q "$BASE_URL/$ARCH_TAG/Tdarr_Server.zip" -O /opt/tdarr/Tdarr_Server.zip
+wget -q "$BASE_URL/$ARCH_TAG/Tdarr_Node.zip" -O /opt/tdarr/Tdarr_Node.zip
+chown tdarr:tdarr /opt/tdarr/Tdarr_Server.zip /opt/tdarr/Tdarr_Node.zip
 
-echo "Extracting updater..."
-sudo -u tdarr unzip -o Tdarr_Updater.zip >/dev/null 2>&1
-rm -f Tdarr_Updater.zip
-chmod +x Tdarr_Updater
-sudo -u tdarr ./Tdarr_Updater &>/dev/null
+echo "Extracting Tdarr_Server..."
+sudo -u tdarr unzip -o /opt/tdarr/Tdarr_Server.zip -d /opt/tdarr/
+chmod +x /opt/tdarr/Tdarr_Server/Tdarr_Server
 
-echo "Creating systemd service files..."
+echo "Extracting Tdarr_Node..."
+sudo -u tdarr unzip -o /opt/tdarr/Tdarr_Node.zip -d /opt/tdarr/
+chmod +x /opt/tdarr/Tdarr_Node/Tdarr_Node
+
+echo "Cleaning up zip files..."
+rm -f /opt/tdarr/Tdarr_Updater.zip /opt/tdarr/Tdarr_Server.zip /opt/tdarr/Tdarr_Node.zip
+
+echo "Creating systemd services..."
 
 cat <<EOF >/etc/systemd/system/tdarr-server.service
 [Unit]
@@ -142,16 +160,14 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-echo "Enabling services..."
-systemctl daemon-reexec
+echo "Enabling and starting Tdarr services..."
 systemctl daemon-reload
 systemctl enable --now tdarr-server.service
 systemctl enable --now tdarr-node.service
 
-echo "Cleaning up..."
-apt-get -y autoremove
-apt-get -y autoclean
-
+echo
+echo "Waiting 5 seconds for services to stabilize..."
+sleep 5
 echo
 echo "✅ Tdarr installation complete!"
 echo "👉 Access via http://<your-ip>:8265"
