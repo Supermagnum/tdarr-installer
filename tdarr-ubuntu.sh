@@ -113,7 +113,6 @@ User=tdarr
 Group=tdarr
 Type=simple
 WorkingDirectory=/opt/tdarr/Tdarr_Server
-ExecStartPre=/opt/tdarr/Tdarr_Updater
 ExecStart=/opt/tdarr/Tdarr_Server/Tdarr_Server
 TimeoutStopSec=20
 KillMode=process
